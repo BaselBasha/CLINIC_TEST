@@ -1,0 +1,19 @@
+Medical Records System - Sample Report
+=======================================
+
+Patient: John Doe
+Date: 2024-01-15
+Provider: Dr. Sarah Ahmed
+
+Summary:
+Routine annual physical examination. All vitals within normal range.
+Blood pressure: 120/80 mmHg
+Heart rate: 72 bpm
+Temperature: 98.6°F
+
+Recommendations:
+- Continue current medication regimen
+- Follow up in 6 months
+- Schedule blood work for next visit
+
+This is a sample file for the Medical Records API file download endpoint.

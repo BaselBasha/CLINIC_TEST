@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find \"/d/New folder \\(4\\)/Backend_Test\" -type f)",
+      "Bash(find \"/d/New folder \\(4\\)/Backend_Test/part-1-build\" -type f)",
+      "Bash(find \"/d/New folder \\(4\\)/Backend_Test/part-2-review\" -type f)"
+    ]
+  }
+}
