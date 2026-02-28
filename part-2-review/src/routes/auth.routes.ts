@@ -1,12 +1,31 @@
 import { Router, Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { z } from "zod";
+import prisma from "../lib/prisma";
 
 const router = Router();
-const prisma = new PrismaClient();
 
-// JWT configuration
-const JWT_SECRET = "clinic-portal-secret-2024";
+// FIX: Read JWT secret from environment variable
+const JWT_SECRET = process.env.JWT_SECRET!;
+
+const SALT_ROUNDS = 12;
+
+// FIX: Allowed roles whitelist
+const ALLOWED_ROLES = ["STAFF", "DOCTOR", "ADMIN"] as const;
+
+// FIX: Input validation schemas
+const registerSchema = z.object({
+  email: z.string().email("Must be a valid email"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  name: z.string().min(1, "Name is required"),
+  role: z.enum(ALLOWED_ROLES).optional().default("STAFF"),
+});
+
+const loginSchema = z.object({
+  email: z.string().email("Must be a valid email"),
+  password: z.string().min(1, "Password is required"),
+});
 
 /**
  * POST /auth/register
@@ -14,7 +33,16 @@ const JWT_SECRET = "clinic-portal-secret-2024";
  */
 router.post("/register", async (req: Request, res: Response) => {
   try {
-    const { email, password, name, role } = req.body;
+    // FIX: Validate input
+    const parsed = registerSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        success: false,
+        error: parsed.error.errors.map((e) => e.message).join("; "),
+      });
+    }
+
+    const { email, password, name, role } = parsed.data;
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -25,9 +53,12 @@ router.post("/register", async (req: Request, res: Response) => {
       });
     }
 
+    // FIX: Hash password before storing
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
     // Create the user
     const user = await prisma.user.create({
-      data: { email, password, name, role: role || "STAFF" },
+      data: { email, password: hashedPassword, name, role },
     });
 
     return res.status(201).json({
@@ -40,10 +71,11 @@ router.post("/register", async (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
+    // FIX: Do not leak stack traces or internal error details
+    console.error("Registration error:", error.message);
     return res.status(500).json({
+      success: false,
       error: "Internal server error",
-      details: error.message,
-      stack: error.stack,
     });
   }
 });
@@ -54,21 +86,32 @@ router.post("/register", async (req: Request, res: Response) => {
  */
 router.post("/login", async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
+    // FIX: Validate input
+    const parsed = loginSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        success: false,
+        error: parsed.error.errors.map((e) => e.message).join("; "),
+      });
+    }
+
+    const { email, password } = parsed.data;
 
     const user = await prisma.user.findUnique({ where: { email } });
 
-    if (!user || user.password !== password) {
+    // FIX: Use bcrypt.compare instead of plaintext comparison
+    if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({
         success: false,
         error: "Invalid email or password",
       });
     }
 
-    // Generate authentication token
+    // FIX: Add token expiration
     const token = jwt.sign(
       { id: user.id, role: user.role },
-      JWT_SECRET
+      JWT_SECRET,
+      { expiresIn: 86400, algorithm: "HS256" } // 24 hours
     );
 
     return res.status(200).json({
@@ -84,10 +127,11 @@ router.post("/login", async (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
+    // FIX: Do not leak stack traces or internal error details
+    console.error("Login error:", error.message);
     return res.status(500).json({
+      success: false,
       error: "Internal server error",
-      details: error.message,
-      stack: error.stack,
     });
   }
 });

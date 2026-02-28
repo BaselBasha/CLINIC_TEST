@@ -1,0 +1,39 @@
+version: "3.8"
+
+services:
+  # ─── PostgreSQL ──────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: clinic_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d clinic_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ─── Clinic API ──────────────────────────────────────
+  api:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/clinic_db?schema=public
+      PORT: 3000
+      NODE_ENV: production
+      JWT_SECRET: a9f2k4m7p1x8w3q6r5t0y9u2i4o7e1s3d6f8g0h
+      JWT_EXPIRES_IN: 24h
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:

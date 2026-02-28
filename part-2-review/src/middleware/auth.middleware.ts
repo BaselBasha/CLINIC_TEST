@@ -1,8 +1,13 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-// JWT configuration
-const JWT_SECRET = "clinic-portal-secret-2024";
+// FIX: Read JWT secret from environment variable instead of hardcoding
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  console.error("FATAL: JWT_SECRET environment variable is not set.");
+  process.exit(1);
+}
 
 interface JwtPayload {
   id: string;
@@ -33,10 +38,13 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
   const token = authHeader.split(" ")[1];
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    // FIX: Restrict to HS256 algorithm to prevent algorithm confusion attacks
+    const decoded = jwt.verify(token, JWT_SECRET as string, {
+      algorithms: ["HS256"],
+    }) as unknown as JwtPayload;
     req.user = decoded;
     next();
-  } catch (error) {
+  } catch {
     res.status(401).json({ success: false, error: "Invalid or expired token" });
   }
 }
