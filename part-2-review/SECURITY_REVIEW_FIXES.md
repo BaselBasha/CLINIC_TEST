@@ -365,7 +365,7 @@ import prisma from "../lib/prisma";
 | `src/prisma/schema.prisma` | #12 |
 | `src/utils/helpers.ts` | No direct vulnerabilities |
 | `src/lib/prisma.ts` | N/A (created as fix for #14) |
-| `src/package.json` | No direct vulnerabilities |
+| `src/package.json` | No direct vulnerabilities |`
 | `src/tsconfig.json` | No direct vulnerabilities |
 
 ---
